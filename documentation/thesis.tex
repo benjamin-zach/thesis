@@ -1,0 +1,70 @@
+\documentclass[12pt, twoside]{report}
+\usepackage{tikz-uml}
+\usepackage{tikz}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{numdef}
+\graphicspath{ {images/} }
+\renewcommand{\baselinestretch}{1.5} 
+\usepackage[a4paper,width=150mm,top=25mm,bottom=25mm]{geometry}
+\usepackage{fancyhdr}
+\pagestyle{fancy}\fancyfoot{}
+\fancyfoot[LE,RO]{\thepage}
+\usepackage[backend=bibtex, style=alphabetic, sorting=none]{biblatex}
+\addbibresource{references}
+
+\lstset{% 
+	language=C,
+	keywordstyle=\bfseries\color{blue!70!black},
+	basicstyle=\ttfamily\footnotesize, 
+	breaklines=true,
+	columns=fullflexible,
+	escapeinside = ||,
+	breakindent=30pt} 
+\lstnewenvironment{codelisting1}{}{} 
+
+\begin{document}
+
+\include{chapters/title_page}
+
+\pagenumbering{arabic}
+
+\include{chapters/00_abstracts}
+
+\chapter*{}
+For Dada
+
+\chapter*{Acknowledgements}
+I want to thank...
+
+\tableofcontents
+
+\chapter{Introduction}
+\include{chapters/01_introduction}
+\chapter{Applications}
+\include{chapters/02_application}
+\chapter{Approach}
+\include{chapters/03_approach}
+\chapter{Implementation}
+\include{chapters/04_implementation}
+\chapter{Benchmark Tests}
+\include{chapters/05_benchmarks}
+\chapter{Conclusion}
+\include{chapters/06_conclusion}
+
+\newpage
+\printbibliography 
+
+\chapter*{Erklärung}
+ 
+ 
+ 
+Ich versichere, dass ich diese Arbeit selbstständig verfasst habe und keine anderen als die angegebenen Quellen und Hilfsmittel benutzt habe. 
+ 
+ 
+ 
+ \vspace{3cm}
+ 
+Heidelberg, den 15.06.2017 \hspace{1cm}                         Unterschrift:  . . . . . . . . . . . . . . . . .
+\end{document}

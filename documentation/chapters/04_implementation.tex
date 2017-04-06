@@ -1,0 +1,239 @@
+\section{\texttt{Type\_container}}
+
+\subsection{Basic functionality}
+The \verb|Type_container| can be instanciated by using its public constructor
+\begin{codelisting1}
+	Type_container(const Domain_shape& shape)
+\end{codelisting1}	
+and provides references to the send and receive types. The associated functions are called
+\begin{codelisting1}
+ 	const MPI_Datatype& get_send_data_type(int x, int y, int z) const,
+ 	const MPI_Datatype& get_recv_data_type(int x, int y, int z) const.
+\end{codelisting1}. 	
+These types simplify the communication process as we do not any more need to copy the relevant data to or from buffers, respectively, in order to have it in a continuous piece of memory. This task is rolled out to other routines provided by MPI. It is only necessary to define and assemble the positions of all relevant memory locations. Moreover it is possible to interpret messages differently and therefore reconstruct the data to unequal positions on sending than on receiving side. The base MPI type of the values is handed via a template argument. Valid examples hereof are \verb|MPI_INT| or \verb|MPI_DOUBLE|; the total list can be found at \cite{MPI_docu}, tables 3.2 to 3.4. 
+
+\subsection{MPI datatype construction routines}
+\def\rI{0.07}
+\def\rII{0.13}
+\def\rect{0.3}
+\begin{figure}	
+	\centering
+	\begin{tikzpicture}
+	\draw [->] (0,0) -> (10,0);
+	\draw [->] (0,0) -> (0,6);
+	\node [below right] at (0,6) {$y$};
+	\node [above left] at (10,0) {$x$};
+	\foreach \y in {1,..., 5} 
+	\draw [white, fill=red] (1-\rect, \y-\rect) rectangle (2+\rect, \y+\rect);
+	\foreach \x in { 1, ..., 9 }
+	\foreach \y in { 1,..., 5 }
+	\draw (\x,\y) circle (\rI);
+	\foreach \x in { 1, 2 }
+	\foreach \y in { 1,..., 5 }
+	\draw [fill=black] (\x,\y) circle (\rII);
+	\foreach \x in { 3, 5 }
+	\foreach \y in {1, 3, 5}
+	\draw [white, fill=green] (\x-\rect,\y-\rect) rectangle (\x+\rect,\y+\rect);
+	\foreach \x in { 3, 5 }
+	\foreach \y in {1, 3, 5}
+	\draw [fill=black] (\x,\y) circle (\rII);
+	\foreach \x in { 9 }
+	\foreach \y in {1, 5}
+	\draw [white, fill=blue] (\x-\rect,\y-\rect) rectangle (\x+\rect,\y+\rect);
+	\foreach \x in { 9 }
+	\foreach \y in {1, 5}
+	\draw [fill=black] (\x,\y) circle (\rII);
+	\draw (1,0.05) -> (1,-0.05);
+	\node [below] at (1,0) {0};
+	\draw (5,0.05) -> (5,-0.05);
+	\node [below] at (5,0) {4};
+	\draw (9,0.05) -> (9,-0.05);
+	\node [below] at (9,0) {8};
+	\draw (0.05,1) -> (-0.05,1);
+	\node [left] at (0,1) {0};
+	\draw (0.05,5) -> (-0.05,5);
+	\node [left] at (0,5) {4};
+	
+	\draw (10.5,2.5) rectangle (14.5,5.5);
+	\draw [white, fill=red] (11-\rect,5-\rect) rectangle (11+\rect,5+\rect);
+	\node [right] at (11.5,5) {coarseness $2^0$};
+	\draw [white, fill=green] (11-\rect,4-\rect) rectangle (11+\rect,4+\rect);
+	\node [right] at (11.5,4) {coarseness $2^1$};
+	\draw [white, fill=blue] (11-\rect,3-\rect) rectangle (11+\rect,3+\rect);
+	\node [right] at (11.5,3) {coarseness $2^2$};
+	\end{tikzpicture}
+	\caption{Scheme for the block structure of the receive types: for the uncoarsened values ($2^0$) each line is one block; for all coarsened areas each value forms its own block.}
+\end{figure}
+MPI provides a variety of routines to construct customizes data types. In general one can define the parameters: 
+\begin{itemize}
+	\itemsep-0em
+	\item \textit{count}: the number of blocks or elements the new type consists of
+	\item \textit{length}: the number of consecutive elements in one block
+	\item \textit{displacements} or \textit{stride}: the displacements of the blocks or elements or the constant stride among them
+	\item \textit{oldtype}: the base type of a single element
+\end{itemize}
+The different constructors vary in whether these parameters are constant within the new type. \\
+In the implementation at hand two new types are interleaved within one exchange type: the inner type bundles up all values of a certain coarseness; for example one inner type for all uncoarsened, one for all coarsened by $2^1$ and so on. Hence the parameters have the following characteristic: the blocklength remains constant (either the number of planes to be sent, or 1), we give an array of displacements with respect to the first point in the domain as in general there is no constant stride among the data points and the oldtype is the constant base type. For this case MPI provides the routine
+\begin{codelisting1}
+int MPI_Type_create_indexed_block(int count, int blocklength, const int displacements[], MPI_Datatype oldtype, MPI_Datatype *newtype).
+\end{codelisting1}
+In order to pack all types in one outer type we later use
+\begin{codelisting1}
+int MPI_Type_create_struct(int count, const int blocklengths[], const MPI_Aint displacements[], const MPI_Datatype types[], MPI_Datatype *newtype).
+\end{codelisting1}
+which is the simplest possibility to package the different inner types. In this routine allthough they all use the  point 0 for reference, it is necessary to specify a whole array of displacements as 0's. The same holds for the blocklength which is actually always 1 throughout the type.
+
+\subsection{Receive types}
+\begin{figure}
+	\centering
+	\def\scale{0.5}
+	\begin{tikzpicture}[scale=\scale, every node/.style={scale=\scale*0.9}]
+	\def\xsize{27}
+	\def\ysize{27}
+	\def\halosize{5}
+	\def\fun{6}
+	\def\r{0.4}
+	\def\boxsize{0.45}
+	\def\farbe{black}
+	\draw[\farbe](1-\r,1-\r) rectangle (\xsize+\r, \ysize+\r);
+	\draw[\farbe, dashed] (\xsize+\r, \ysize+\r) -- (\xsize+\r+1, \ysize+\r);
+	\node[\farbe, right] at (\xsize+\r+1,\ysize+\r) {halo zones};
+	\def\farbe{black}
+	\draw[\farbe, fill=blue, opacity=0.1] (\halosize+1-\r, \halosize+1-\r) rectangle (\xsize-\halosize+\r,\ysize-\halosize+\r);
+	\draw[\farbe, dashed] (\xsize-\halosize+\r,\ysize-\halosize+\r) -- (\xsize+\r+1, \ysize-\halosize+\r);
+	\node[\farbe,right] at (\xsize+\r+1, \ysize-\halosize+\r) {domain};
+	\newcounter{i}
+	\def\test{\halosize+1}
+	\foreach \y in {\halosize-1, \halosize}
+	{
+		\draw [white, fill=yellow] (\halosize+\boxsize, \y-\boxsize) rectangle (\xsize-\halosize+\boxsize, \y+\boxsize);
+	}
+	\foreach \y in {\halosize-2}
+	{	
+		\foreach \x in {6,8,...,22}
+		{
+			\draw [white, fill=green] (\x-0.45,\y-0.45) rectangle (\x+0.45,\y+\boxsize);
+		}
+	}
+	\foreach \y in {1}
+	{	\foreach \x in {6,10,...,24}
+		{
+			\draw [white, fill=red] (\x-\boxsize,\y-\boxsize) rectangle (\x+\boxsize,\y+\boxsize);
+		}
+	}
+	\foreach \y in {\ysize-4,\ysize-3}
+	{
+		\draw [white, fill=yellow] (\halosize-2+\boxsize, \y-\boxsize) rectangle (\halosize+\boxsize, \y+\boxsize);
+	}
+	\draw [white, fill=green] (\halosize-3+\boxsize, \ysize-4-\boxsize) rectangle (\halosize-3+\boxsize+1, \ysize-4-\boxsize+1)
+	\foreach \y in {1,...,\ysize} 
+	{
+		\foreach \x in {1,...,\xsize}
+		{
+			\draw (\x,\y) circle (\r);
+			\node at (\x,\y) {\textbf{\arabic{i}}};
+			\addtocounter{i}{1};	
+		}
+	}
+	
+	\end{tikzpicture}	
+	\caption{;kj;}
+\end{figure}
+
+
+
+\subsection{Initialization process}
+\begin{figure}
+\centering
+\begin{tikzpicture}[scale=0.7, every node/.style={scale=0.75}]
+\draw [thick] (1.5,1.5) rectangle (10.5,10.5);
+\draw [dashed] (10.5,10.5) -- (12.5,10.5);
+\node [right] at (12.5,10.5) {only domain};
+\draw [thick] (0.5,0.5) rectangle (11.5,11.5);
+\draw [dashed] (11.5,11.5) -- (12.5,11.5);
+\node [right] at (12.5,11.5) {halos};
+%\newcounter{i}
+\def\r{0.4}
+	\foreach \y in {1,...,11} 
+		\foreach \x in {1,...,11}
+		{
+			\draw (\x,\y) circle (\r);
+			\node at (\x,\y) {\arabic{i}};
+			\addtocounter{i}{1};			
+		}
+	\setcounter{i}{12}
+	\foreach \y in {2,4,...,10} 
+	{
+		\foreach \x in {2,4,...,10}
+		{
+			\draw [red, fill=white] (\x,\y) circle (\r);
+			\node [red, thick] at (\x,\y) {\textbf{\arabic{i}}};
+			\addtocounter{i}{2};	
+		}
+		\addtocounter{i}{11};
+	}
+	\setcounter{i}{121}
+	\foreach \y in {1,...,5} 
+		\foreach \x in {13,...,17}
+		{
+			\draw [red, fill=white] (\x,\y) circle (\r);
+			\node [red] at (\x,\y) {\textbf{\arabic{i}}};
+			\stepcounter{i}		
+		}
+	\setcounter{i}{127}
+	\foreach \y in {2,4}
+	{
+		\foreach \x in {14,16}
+		{
+			\draw [red, fill=blue] (\x,\y) circle (\r);
+			\node [white, thick] at (\x,\y) {\textbf{\arabic{i}}};
+			\addtocounter{i}{2};
+		}	
+		\addtocounter{i}{3};
+	}
+	\foreach \y in {1,2}
+		\foreach \x in {19,20}
+		{
+			\draw [black, fill=blue] (\x,\y) circle (\r);
+			\node [white, thick] at (\x,\y) {\textbf{\arabic{i}}};
+			\stepcounter{i}	
+		}
+	\def\xo{14}
+	\def\yo{2}
+	\def\xi{19}
+	\def\yi{1}
+	\foreach \y in {0,2}
+	{
+		\foreach \x in {0,2}
+		{
+			\draw [->, thick, blue] (\xo+\x+\r,\yo+\y) .. controls (\xo+\x+1,7) and (\xo+\x+2,6) .. (\x/2+\xi,\y/2+\yi+\r);
+		}
+	}
+\end{tikzpicture}	
+\caption{;kj;}
+\end{figure}
+The constructor requires a reference to an object of \verb|Domain_shape|, which contains all necessary information about the size and halo properties of the process' domains. It is used to perform init routine \verb|void init_data_types(const Domain_shape&)|, which splits up in a phase for the send and the receive types, respecively. \\
+
+\begin{figure}
+	\centering
+	\begin{tikzpicture}
+	\umlclass[template=MPI\_Datatype]{Type\_container} {
+		- send\_types : std::array\textless MPI\_Datatype, 27\textgreater  \\
+		- recv\_types : std::array\textless MPI\_Datatype, 27\textgreater  \\
+	}{
+	\umlstatic{ - index(int, int, int) : int } \\
+	- get\_send\_block\_number(const int\&, int, int, int, const Domain\_shape\&) : int \\
+	- get\_recv\_block\_number(const int\&, int, int, int, const Domain\_shape\&) : int \\
+	- get\_send\_block\_length(int, int, int, int, const Domain\_shape\&) : int \\
+	- get\_recv\_block\_length(int, int, int, int, const Domain\_shape\&) : int \\
+	- init\_data\_types(const Domain\_shape\&) : void \\
+	- init\_recv\_types(int, std::array \textless MPI\_Datatype,27 \textgreater\& , const Domain\_shape\&) : void \\
+	- init\_recv\_full\_types(std::array\textless MPI\_Datatype, 27 \textgreater\&, const Domain\_shape\&) : void \\
+	- init\_send\_types(int, std::array\textless MPI\_Datatype, 27 \textgreater\& , const Domain\_shape \&) : void \\ \\
+	+ Type\_container(const Domain\_shape\&)\\
+	+ get\_send\_data\_type(int, int, int)const : const MPI\_Datatype\& \\
+	+ get\_recv\_data\_type(int, int, int)const : const MPI\_Datatype\& \\
+}
+\end{tikzpicture}
+\caption{Attributes of the class \texttt{Type\_container}. }
+\end{figure}
