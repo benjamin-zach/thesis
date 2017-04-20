@@ -1,0 +1,61 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 2.7 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated as
+% required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+\sortlist[entry]{none/global/}
+  \entry{MPI_docu}{book}{}
+    \name{author}{1}{}{%
+      {{hash=FMPI}{%
+         family={Forum},
+         family_i={F\bibinitperiod},
+         given={Message Passing\bibnamedelima Interface},
+         given_i={M\bibinitperiod\bibinitdelim P\bibinitperiod\bibinitdelim
+  I\bibinitperiod},
+      }}%
+    }
+    \strng{namehash}{FMPI1}
+    \strng{fullhash}{FMPI1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{labelalpha}{For15}
+    \field{subtitle}{Version 3.1}
+    \field{title}{MPI: A Message-Passing Interface Standard}
+    \field{year}{2015}
+  \endentry
+
+  \entry{dobbs}{online}{}
+    \name{author}{1}{}{%
+      {{hash=MP}{%
+         family={Marginean},
+         family_i={M\bibinitperiod},
+         given={Petru},
+         given_i={P\bibinitperiod},
+      }}%
+    }
+    \strng{namehash}{MP1}
+    \strng{fullhash}{MP1}
+    \field{labelnamesource}{author}
+    \field{labeltitlesource}{title}
+    \field{labelalpha}{Mar07}
+    \field{title}{Logging In C++}
+    \verb{url}
+    \verb http://www.drdobbs.com/cpp/logging-in-c/201804215?pgno=1
+    \endverb
+    \field{year}{2007}
+  \endentry
+\endsortlist
+\endinput
